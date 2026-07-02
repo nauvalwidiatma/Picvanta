@@ -1,17 +1,19 @@
 {
-  "schema_version": "altanova.automation_state.v0.3",
+  "schema_version": "altanova.automation_state.v0.4",
   "app": {
     "package": "com.gassticker",
     "screen": "screen.home"
   },
   "default_state": {
     "active_screen": "screen.home",
+    "editor_mode": null,
     "has_image": false,
     "has_selection": false,
     "active_tab": null,
     "visible_ids": [
       "screen.home",
-      "menu.remove_bg_sticker"
+      "menu.sticker_editor",
+      "menu.remove_bg_editor"
     ],
     "editor_initial_ids": [
       "screen.editor",
@@ -40,6 +42,7 @@
     "broadcast_action": "com.gassticker.AUTOMATION",
     "fields": [
       "active_screen",
+      "editor_mode",
       "has_image",
       "has_selection",
       "active_tab",
@@ -64,6 +67,7 @@
   "state_notes": [
     "After an image is loaded, canvas.image_editor becomes the primary magic select target.",
     "After a selection exists, Add/Cut brush controls and export preview become meaningful.",
+    "Sticker Editor exposes Text and Style controls. Remove BG mode hides Text and Style and exports a transparent cutout.",
     "Fonts, text style chips, and border swatches update the generated sticker without an explicit update button.",
     "Automation can use broadcast commands from automation-contract.json to navigate and set editor parameters without screenshot tapping.",
     "For async commands such as magic_select, compose_sticker, load_image_path, and save_png, poll get_state until is_processing is false or the expected field changes."

@@ -254,6 +254,11 @@ private enum class AppScreen {
     Editor,
 }
 
+private enum class EditorMode {
+    Sticker,
+    RemoveBg,
+}
+
 private enum class ColorPickerTarget {
     Font,
     Style,
@@ -296,15 +301,30 @@ private fun ProBackdrop(content: @Composable () -> Unit) {
 @Composable
 private fun GasStickerRoot() {
     var screen by remember { mutableStateOf(AppScreen.Home) }
+    var editorMode by remember { mutableStateOf(EditorMode.Sticker) }
 
     SideEffect {
         AutomationBridge.rootHandler = { command ->
             when (command.name) {
                 "open_editor",
                 "navigate_editor",
-                "show_editor" -> {
+                "show_editor",
+                "open_sticker_editor" -> {
+                    editorMode = EditorMode.Sticker
                     screen = AppScreen.Editor
-                    automationOk(command.name) { put("active_screen", "screen.editor") }
+                    automationOk(command.name) {
+                        put("active_screen", "screen.editor")
+                        put("editor_mode", "sticker")
+                    }
+                }
+                "open_remove_bg_editor",
+                "open_remove_bg" -> {
+                    editorMode = EditorMode.RemoveBg
+                    screen = AppScreen.Editor
+                    automationOk(command.name) {
+                        put("active_screen", "screen.editor")
+                        put("editor_mode", "remove_bg")
+                    }
                 }
                 "navigate_home",
                 "show_home" -> {
@@ -318,6 +338,7 @@ private fun GasStickerRoot() {
             JSONObject()
                 .put("schema_version", "altanova.automation_runtime_state.v0.1")
                 .put("active_screen", if (screen == AppScreen.Home) "screen.home" else "screen.editor")
+                .put("editor_mode", if (editorMode == EditorMode.Sticker) "sticker" else "remove_bg")
                 .put("package", "com.gassticker")
         }
     }
@@ -330,14 +351,29 @@ private fun GasStickerRoot() {
     }
 
     when (screen) {
-        AppScreen.Home -> HomeScreen(onOpenSticker = { screen = AppScreen.Editor })
-        AppScreen.Editor -> GasStickerScreen(onBackHome = { screen = AppScreen.Home })
+        AppScreen.Home -> HomeScreen(
+            onOpenSticker = {
+                editorMode = EditorMode.Sticker
+                screen = AppScreen.Editor
+            },
+            onOpenRemoveBg = {
+                editorMode = EditorMode.RemoveBg
+                screen = AppScreen.Editor
+            },
+        )
+        AppScreen.Editor -> GasStickerScreen(
+            editorMode = editorMode,
+            onBackHome = { screen = AppScreen.Home },
+        )
     }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun GasStickerScreen(onBackHome: () -> Unit) {
+private fun GasStickerScreen(
+    editorMode: EditorMode,
+    onBackHome: () -> Unit,
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var sourceBitmap by remember { mutableStateOf<Bitmap?>(null) }
@@ -381,18 +417,35 @@ private fun GasStickerScreen(onBackHome: () -> Unit) {
     var status by remember { mutableStateOf("Pilih foto, lalu tap objek yang mau jadi sticker.") }
     var lastSavedUri by remember { mutableStateOf<String?>(null) }
     var lastAutomationError by remember { mutableStateOf<String?>(null) }
+    val isStickerEditor = editorMode == EditorMode.Sticker
+
+    LaunchedEffect(editorMode) {
+        if (!isStickerEditor && (activeTab == EditorTab.Text || activeTab == EditorTab.Style)) {
+            activeTab = EditorTab.Select
+        }
+        if (!isStickerEditor && status.contains("sticker", ignoreCase = true)) {
+            status = "Pilih foto, lalu tap objek yang mau disimpan."
+        }
+    }
 
     fun tabFromName(value: String): EditorTab? =
         EditorTab.entries.firstOrNull { it.name.equals(value, ignoreCase = true) }
 
     fun statusForTab(tab: EditorTab): String =
         when (tab) {
-            EditorTab.Select -> "Tap objek untuk magic remove BG."
+            EditorTab.Select -> if (isStickerEditor) "Tap objek untuk magic remove BG." else "Tap objek yang mau disimpan."
             EditorTab.Add -> "Usap area yang mau ditambah."
             EditorTab.Cut -> "Usap area yang mau dibuang."
             EditorTab.Text -> "Atur teks sticker."
             EditorTab.Style -> "Atur font dan border sticker."
             EditorTab.Export -> "Preview dan simpan PNG."
+        }
+
+    fun composeOutput(bitmap: Bitmap, mask: SegmentMask): Bitmap =
+        if (isStickerEditor) {
+            StickerComposer.createSticker(bitmap, mask, stickerStyle)
+        } else {
+            StickerComposer.createCutout(bitmap, mask)
         }
 
     fun setTextOffset(next: Offset) {
@@ -428,13 +481,17 @@ private fun GasStickerScreen(onBackHome: () -> Unit) {
         undoStack = emptyList()
         redoStack = emptyList()
         lastAutomationError = null
-        status = "Gambar $sourceName siap. Tap objek untuk magic remove BG."
+        status = if (isStickerEditor) {
+            "Gambar $sourceName siap. Tap objek untuk magic remove BG."
+        } else {
+            "Gambar $sourceName siap. Tap objek yang mau disimpan."
+        }
     }
 
     fun updateStickerFromMask(bitmap: Bitmap, mask: SegmentMask, nextStatus: String) {
         scope.launch {
             stickerBitmap = withContext(Dispatchers.Default) {
-                StickerComposer.createSticker(bitmap, mask, stickerStyle)
+                composeOutput(bitmap, mask)
             }
             status = nextStatus
         }
@@ -495,11 +552,7 @@ private fun GasStickerScreen(onBackHome: () -> Unit) {
                         StickerResult(
                             mask = mask,
                             boundary = SelectionBoundary.from(mask),
-                            sticker = StickerComposer.createSticker(
-                                source = bitmap,
-                                mask = mask,
-                                style = stickerStyle,
-                            ),
+                            sticker = composeOutput(bitmap, mask),
                         )
                     }
                 }
@@ -510,7 +563,11 @@ private fun GasStickerScreen(onBackHome: () -> Unit) {
                 undoStack = emptyList()
                 redoStack = emptyList()
                 activeTab = EditorTab.Select
-                status = "Sticker siap. Kalau potongannya kurang pas, tap titik lain di objek."
+                status = if (isStickerEditor) {
+                    "Sticker siap. Kalau potongannya kurang pas, tap titik lain di objek."
+                } else {
+                    "Cutout siap. Kalau potongannya kurang pas, tap titik lain di objek."
+                }
             }.onFailure {
                 lastAutomationError = it.message ?: "Gagal memproses sticker."
                 status = lastAutomationError ?: "Gagal memproses sticker."
@@ -672,12 +729,14 @@ private fun GasStickerScreen(onBackHome: () -> Unit) {
                     automationOk(command.name) { put("active_tab", tab.name.lowercase()) }
                 }
                 "set_text" -> {
+                    if (!isStickerEditor) return@editorHandler automationError(command.name, "unsupported_in_remove_bg_editor")
                     label = args.optString("text", label).take(18)
                     activeTab = EditorTab.Text
                     status = "Teks sticker diubah via automation."
                     automationOk(command.name) { put("label", label) }
                 }
                 "move_text" -> {
+                    if (!isStickerEditor) return@editorHandler automationError(command.name, "unsupported_in_remove_bg_editor")
                     val direction = args.optString("direction", "").lowercase()
                     val step = args.optDouble("step", 14.0).toFloat()
                     val dx = when (direction) {
@@ -698,6 +757,7 @@ private fun GasStickerScreen(onBackHome: () -> Unit) {
                     }
                 }
                 "reset_text_position" -> {
+                    if (!isStickerEditor) return@editorHandler automationError(command.name, "unsupported_in_remove_bg_editor")
                     textOffset = Offset.Zero
                     activeTab = EditorTab.Text
                     automationOk(command.name) {
@@ -706,6 +766,7 @@ private fun GasStickerScreen(onBackHome: () -> Unit) {
                     }
                 }
                 "set_font" -> {
+                    if (!isStickerEditor) return@editorHandler automationError(command.name, "unsupported_in_remove_bg_editor")
                     val font = findFont(args.optString("font", args.optString("name", "")))
                         ?: return@editorHandler automationError(command.name, "unknown_font")
                     selectedFont = font
@@ -713,6 +774,7 @@ private fun GasStickerScreen(onBackHome: () -> Unit) {
                     automationOk(command.name) { put("font", font.name) }
                 }
                 "set_text_style" -> {
+                    if (!isStickerEditor) return@editorHandler automationError(command.name, "unsupported_in_remove_bg_editor")
                     val treatment = findTextTreatment(args.optString("style", args.optString("text_style", "")))
                         ?: return@editorHandler automationError(command.name, "unknown_text_style")
                     selectedTextTreatment = treatment
@@ -720,24 +782,28 @@ private fun GasStickerScreen(onBackHome: () -> Unit) {
                     automationOk(command.name) { put("text_style", treatment.name.lowercase()) }
                 }
                 "set_font_color" -> {
+                    if (!isStickerEditor) return@editorHandler automationError(command.name, "unsupported_in_remove_bg_editor")
                     fontColor = args.optColor("color", fontColor)
                     activeTab = EditorTab.Style
                     automationOk(command.name) { put("font_color", fontColor.toHexColor()) }
                 }
                 "set_style_color",
                 "set_text_style_color" -> {
+                    if (!isStickerEditor) return@editorHandler automationError(command.name, "unsupported_in_remove_bg_editor")
                     textStyleColor = args.optColor("color", textStyleColor)
                     activeTab = EditorTab.Style
                     automationOk(command.name) { put("text_style_color", textStyleColor.toHexColor()) }
                 }
                 "set_border_color",
                 "set_outline_color" -> {
+                    if (!isStickerEditor) return@editorHandler automationError(command.name, "unsupported_in_remove_bg_editor")
                     outlineColor = args.optColor("color", outlineColor)
                     activeTab = EditorTab.Style
                     automationOk(command.name) { put("border_color", outlineColor.toHexColor()) }
                 }
                 "set_border_width",
                 "set_outline_width" -> {
+                    if (!isStickerEditor) return@editorHandler automationError(command.name, "unsupported_in_remove_bg_editor")
                     outlineWidth = args.optDouble("width", outlineWidth.toDouble()).toFloat().coerceIn(4f, 28f)
                     activeTab = EditorTab.Style
                     automationOk(command.name) { put("border_width", outlineWidth.toDouble()) }
@@ -858,6 +924,7 @@ private fun GasStickerScreen(onBackHome: () -> Unit) {
                 .put("schema_version", "altanova.automation_runtime_state.v0.1")
                 .put("active_screen", "screen.editor")
                 .put("package", "com.gassticker")
+                .put("editor_mode", if (isStickerEditor) "sticker" else "remove_bg")
                 .put("has_image", sourceBitmap != null)
                 .put("has_selection", selectedMask != null)
                 .put("active_tab", activeTab.name.lowercase())
@@ -887,12 +954,12 @@ private fun GasStickerScreen(onBackHome: () -> Unit) {
         }
     }
 
-    LaunchedEffect(sourceBitmap, selectedMask, stickerStyle) {
+    LaunchedEffect(sourceBitmap, selectedMask, stickerStyle, editorMode) {
         val bitmap = sourceBitmap
         val mask = selectedMask
         if (bitmap != null && mask != null) {
             stickerBitmap = withContext(Dispatchers.Default) {
-                StickerComposer.createSticker(bitmap, mask, stickerStyle)
+                composeOutput(bitmap, mask)
             }
         }
     }
@@ -906,7 +973,7 @@ private fun GasStickerScreen(onBackHome: () -> Unit) {
                 .padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Header(onBackHome = onBackHome)
+            Header(editorMode = editorMode, onBackHome = onBackHome)
 
             SourcePicker(
                 modifier = Modifier.weight(1f),
@@ -952,7 +1019,7 @@ private fun GasStickerScreen(onBackHome: () -> Unit) {
                     if (bitmap != null && mask != null) {
                         scope.launch {
                             stickerBitmap = withContext(Dispatchers.Default) {
-                                StickerComposer.createSticker(bitmap, mask, stickerStyle)
+                                composeOutput(bitmap, mask)
                             }
                             status = "Seleksi brush diterapkan."
                         }
@@ -965,6 +1032,7 @@ private fun GasStickerScreen(onBackHome: () -> Unit) {
 
             BottomEditorPanel(
                 activeTab = activeTab,
+                allowTextStyleControls = isStickerEditor,
                 label = label,
                 textOffset = textOffset,
                 outlineColor = outlineColor,
@@ -984,10 +1052,14 @@ private fun GasStickerScreen(onBackHome: () -> Unit) {
                         status = "Masukin gambar dulu."
                         return@BottomEditorPanel
                     }
+                    if (!isStickerEditor && (it == EditorTab.Text || it == EditorTab.Style)) {
+                        status = "Remove BG hanya pakai select, brush, dan export."
+                        return@BottomEditorPanel
+                    }
                     activeTab = it
                     lastBrushPoint = null
                     status = when (it) {
-                        EditorTab.Select -> "Tap objek untuk magic remove BG."
+                        EditorTab.Select -> statusForTab(EditorTab.Select)
                         EditorTab.Add -> "Usap area yang mau ditambah."
                         EditorTab.Cut -> "Usap area yang mau dibuang."
                         EditorTab.Text -> "Atur teks sticker."
@@ -1041,7 +1113,10 @@ private fun GasStickerScreen(onBackHome: () -> Unit) {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun HomeScreen(onOpenSticker: () -> Unit) {
+private fun HomeScreen(
+    onOpenSticker: () -> Unit,
+    onOpenRemoveBg: () -> Unit,
+) {
     Scaffold(containerColor = androidx.compose.ui.graphics.Color.Transparent) { innerPadding ->
         Column(
             modifier = Modifier
@@ -1065,15 +1140,24 @@ private fun HomeScreen(onOpenSticker: () -> Unit) {
                 )
             }
 
-            FlowRow(
+            Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 HomeMenuCard(
-                    title = "Cutout & Photo Editor",
-                    subtitle = "Tap objek, rapikan seleksi, tambah teks, export PNG.",
+                    title = "Sticker Editor",
+                    subtitle = "Cutout, teks, style, export PNG.",
+                    stableId = "menu.sticker_editor",
                     onClick = onOpenSticker,
+                    modifier = Modifier.weight(1f),
+                )
+                HomeMenuCard(
+                    title = "Remove BG",
+                    subtitle = "Potong background dan simpan PNG.",
+                    stableId = "menu.remove_bg_editor",
+                    onClick = onOpenRemoveBg,
+                    modifier = Modifier.weight(1f),
                 )
             }
         }
@@ -1084,6 +1168,8 @@ private fun HomeScreen(onOpenSticker: () -> Unit) {
 private fun HomeMenuCard(
     title: String,
     subtitle: String,
+    stableId: String,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -1100,14 +1186,13 @@ private fun HomeMenuCard(
     )
 
     Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(148.dp)
+        modifier = modifier
+            .aspectRatio(1f)
             .graphicsLayer {
                 scaleX = scale
                 scaleY = scale
             }
-            .stableId("menu.remove_bg_sticker", "button")
+            .stableId(stableId, "button")
             .border(1.dp, ProBorder, RoundedCornerShape(18.dp))
             .clickable(
                 interactionSource = interactionSource,
@@ -1118,13 +1203,13 @@ private fun HomeMenuCard(
         shape = RoundedCornerShape(18.dp),
         shadowElevation = elevation,
     ) {
-        Row(
-            modifier = Modifier.padding(18.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.SpaceBetween,
+            horizontalAlignment = Alignment.Start,
         ) {
             Surface(
-                modifier = Modifier.size(58.dp),
+                modifier = Modifier.size(46.dp),
                 color = ProBlueSoft,
                 shape = RoundedCornerShape(16.dp),
             ) {
@@ -1133,16 +1218,17 @@ private fun HomeMenuCard(
                         imageVector = Icons.Filled.TouchApp,
                         contentDescription = null,
                         tint = ProBlue,
-                        modifier = Modifier.size(28.dp),
+                        modifier = Modifier.size(24.dp),
                     )
                 }
             }
-            Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                Text(title, fontWeight = FontWeight.Black, fontSize = 18.sp)
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(title, fontWeight = FontWeight.Black, fontSize = 16.sp, lineHeight = 18.sp)
                 Text(
                     subtitle,
                     color = ProMuted,
                     style = MaterialTheme.typography.bodySmall,
+                    lineHeight = 16.sp,
                 )
             }
         }
@@ -1150,7 +1236,10 @@ private fun HomeMenuCard(
 }
 
 @Composable
-private fun Header(onBackHome: () -> Unit) {
+private fun Header(
+    editorMode: EditorMode,
+    onBackHome: () -> Unit,
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -1158,13 +1247,17 @@ private fun Header(onBackHome: () -> Unit) {
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
-                text = "Picvanta Editor",
+                text = if (editorMode == EditorMode.Sticker) "Sticker Editor" else "Remove BG",
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Black,
                 letterSpacing = 0.sp,
             )
             Text(
-                text = "Potong objek, rapikan seleksi, export PNG.",
+                text = if (editorMode == EditorMode.Sticker) {
+                    "Cutout, teks, style, export PNG."
+                } else {
+                    "Potong background dan simpan PNG transparan."
+                },
                 color = ProMuted,
                 style = MaterialTheme.typography.bodyMedium,
             )
@@ -1182,6 +1275,7 @@ private fun Header(onBackHome: () -> Unit) {
 @Composable
 private fun BottomEditorPanel(
     activeTab: EditorTab,
+    allowTextStyleControls: Boolean,
     label: String,
     textOffset: Offset,
     outlineColor: Int,
@@ -1243,8 +1337,10 @@ private fun BottomEditorPanel(
                 EditorTabButton(EditorTab.Select, activeTab, Icons.Filled.TouchApp, "Select", true, onTabChange)
                 EditorTabButton(EditorTab.Add, activeTab, Icons.Filled.AddCircle, "Add", hasImage, onTabChange)
                 EditorTabButton(EditorTab.Cut, activeTab, Icons.Filled.RemoveCircle, "Cut", hasImage, onTabChange)
-                EditorTabButton(EditorTab.Text, activeTab, Icons.Filled.TextFields, "Text", hasImage, onTabChange)
-                EditorTabButton(EditorTab.Style, activeTab, Icons.Filled.Palette, "Style", hasImage, onTabChange)
+                if (allowTextStyleControls) {
+                    EditorTabButton(EditorTab.Text, activeTab, Icons.Filled.TextFields, "Text", hasImage, onTabChange)
+                    EditorTabButton(EditorTab.Style, activeTab, Icons.Filled.Palette, "Style", hasImage, onTabChange)
+                }
                 EditorTabButton(EditorTab.Export, activeTab, Icons.Filled.Download, "Export", hasImage, onTabChange)
             }
 

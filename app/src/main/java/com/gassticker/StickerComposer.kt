@@ -90,7 +90,7 @@ object StickerComposer {
         return sticker
     }
 
-    private fun createCutout(source: Bitmap, mask: SegmentMask): Bitmap {
+    fun createCutout(source: Bitmap, mask: SegmentMask): Bitmap {
         val output = Bitmap.createBitmap(source.width, source.height, Bitmap.Config.ARGB_8888)
         val sourcePixels = IntArray(source.width * source.height)
         source.getPixels(sourcePixels, 0, source.width, 0, 0, source.width, source.height)

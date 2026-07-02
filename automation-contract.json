@@ -1,5 +1,5 @@
 {
-  "schema_version": "altanova.automation_contract.v0.3",
+  "schema_version": "altanova.automation_contract.v0.4",
   "app": {
     "name": "Picvanta",
     "package": "com.gassticker",
@@ -19,6 +19,8 @@
     ],
     "runtime_commands": [
       { "command": "open_editor", "description": "Navigate from Home to editor." },
+      { "command": "open_sticker_editor", "description": "Navigate to Sticker Editor mode with text and style controls." },
+      { "command": "open_remove_bg_editor", "aliases": ["open_remove_bg"], "description": "Navigate to Remove BG mode without text/font/style controls." },
       { "command": "navigate_home", "description": "Navigate back to Home." },
       { "command": "open_gallery", "aliases": ["pick_image"], "description": "Open the system image picker for manual gallery selection." },
       { "command": "load_sample_image", "description": "Load an internal sample image for repeatable automation tests." },
@@ -61,7 +63,8 @@
     }
   ],
   "stable_ids": [
-    { "id": "menu.remove_bg_sticker", "role": "button", "description": "Home grid entry for the Cutout & Photo Editor tool. Stable ID kept for automation compatibility." },
+    { "id": "menu.sticker_editor", "role": "button", "description": "Home grid entry for Sticker Editor mode." },
+    { "id": "menu.remove_bg_editor", "role": "button", "description": "Home grid entry for Remove BG mode." },
     { "id": "command.home", "role": "button", "description": "Return from the editor to the Home screen." },
     { "id": "panel.source_picker", "role": "panel", "description": "Top image editor and source picker panel." },
     { "id": "panel.editor_tools", "role": "panel", "description": "Bottom tabbed editor controls panel." },
@@ -172,12 +175,23 @@
     {
       "id": "flow.create_sticker",
       "steps": [
-        "menu.remove_bg_sticker",
+        "menu.sticker_editor",
         "command.open_image or dropzone.open_image",
         "canvas.image_editor",
         "tab.text",
         "input.sticker_text",
         "tab.style",
+        "tab.export",
+        "command.save"
+      ]
+    },
+    {
+      "id": "flow.remove_background",
+      "steps": [
+        "menu.remove_bg_editor",
+        "command.open_image or dropzone.open_image",
+        "canvas.image_editor",
+        "tab.add or tab.cut",
         "tab.export",
         "command.save"
       ]

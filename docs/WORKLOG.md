@@ -2,6 +2,23 @@
 
 Internal engineering notes for each Picvanta iteration. Keep this more practical than the changelog: what changed, what was tested, and what remains risky.
 
+## 2026-07-03 - Home Grid and Remove BG Mode
+
+Goal:
+- Make the Home screen a square app-tool grid and split the current editor into Sticker Editor plus Remove BG.
+
+Changed:
+- Replaced the single wide Home card with two square cards.
+- Added `Sticker Editor` entry for the existing full editor with text/font/style controls.
+- Added `Remove BG` entry using the same selection/brush/export engine without Text and Style tabs.
+- Remove BG mode composes/export transparent cutout output instead of the styled sticker canvas.
+- Added automation commands `open_sticker_editor` and `open_remove_bg_editor`.
+- Updated automation contract/state to v0.4 with `editor_mode`.
+
+Notes:
+- Package and broadcast action remain `com.gassticker` for compatibility.
+- `open_editor` still routes to Sticker Editor as the default legacy behavior.
+
 ## 2026-07-02 - Picvanta Rebrand
 
 Goal:
