@@ -2,6 +2,21 @@
 
 Internal engineering notes for each Picvanta iteration. Keep this more practical than the changelog: what changed, what was tested, and what remains risky.
 
+## 2026-07-03 - Home Layout Polish
+
+Goal:
+- Make Home feel more like a polished app launcher: 30% brand area and 70% tool grid area.
+
+Changed:
+- Centered Picvanta brand and tagline in the top portion.
+- Kept the lower area for the tool grid.
+- Enlarged tool icons and centered card text.
+- Differentiated Sticker Editor and Remove BG icons.
+
+Notes:
+- No stable ID changes.
+- No commit made for this iteration yet; commit only on explicit user request.
+
 ## 2026-07-03 - Home Grid and Remove BG Mode
 
 Goal:

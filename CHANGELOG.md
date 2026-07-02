@@ -4,6 +4,7 @@ All notable user-facing changes to Picvanta are tracked here.
 
 ## Unreleased
 
+- Refined Home layout with centered brand area and larger centered tool icons/text.
 - Changed Home to a two-item square grid: Sticker Editor and Remove BG.
 - Added Remove BG editor mode without text/font/style controls.
 - Updated automation contract/state to v0.4 with editor mode routing.

@@ -55,6 +55,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircle
+import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
@@ -62,6 +63,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.RemoveCircle
+import androidx.compose.material.icons.filled.StickyNote2
 import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material3.Icon
@@ -1123,42 +1125,57 @@ private fun HomeScreen(
                 .fillMaxSize()
                 .stableId("screen.home", "screen")
                 .padding(innerPadding)
-                .padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp),
+                .padding(horizontal = 18.dp, vertical = 12.dp),
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(0.3f),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
                 Text(
                     text = "Picvanta",
-                    fontSize = 32.sp,
+                    fontSize = 38.sp,
                     fontWeight = FontWeight.Black,
                     letterSpacing = 0.sp,
                 )
                 Text(
                     text = "Edit foto cepat, privat, langsung di HP.",
+                    modifier = Modifier.padding(top = 6.dp),
                     color = ProMuted,
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(0.7f),
+                verticalArrangement = Arrangement.Top,
             ) {
-                HomeMenuCard(
-                    title = "Sticker Editor",
-                    subtitle = "Cutout, teks, style, export PNG.",
-                    stableId = "menu.sticker_editor",
-                    onClick = onOpenSticker,
-                    modifier = Modifier.weight(1f),
-                )
-                HomeMenuCard(
-                    title = "Remove BG",
-                    subtitle = "Potong background dan simpan PNG.",
-                    stableId = "menu.remove_bg_editor",
-                    onClick = onOpenRemoveBg,
-                    modifier = Modifier.weight(1f),
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    HomeMenuCard(
+                        title = "Sticker Editor",
+                        subtitle = "Cutout, teks, style.",
+                        stableId = "menu.sticker_editor",
+                        icon = Icons.Filled.StickyNote2,
+                        onClick = onOpenSticker,
+                        modifier = Modifier.weight(1f),
+                    )
+                    HomeMenuCard(
+                        title = "Remove BG",
+                        subtitle = "PNG transparan.",
+                        stableId = "menu.remove_bg_editor",
+                        icon = Icons.Filled.AutoFixHigh,
+                        onClick = onOpenRemoveBg,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
             }
         }
     }
@@ -1169,6 +1186,7 @@ private fun HomeMenuCard(
     title: String,
     subtitle: String,
     stableId: String,
+    icon: ImageVector,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
@@ -1204,31 +1222,46 @@ private fun HomeMenuCard(
         shadowElevation = elevation,
     ) {
         Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.SpaceBetween,
-            horizontalAlignment = Alignment.Start,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(14.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Surface(
-                modifier = Modifier.size(46.dp),
+                modifier = Modifier.size(82.dp),
                 color = ProBlueSoft,
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(24.dp),
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
-                        imageVector = Icons.Filled.TouchApp,
+                        imageVector = icon,
                         contentDescription = null,
                         tint = ProBlue,
-                        modifier = Modifier.size(24.dp),
+                        modifier = Modifier.size(48.dp),
                     )
                 }
             }
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(title, fontWeight = FontWeight.Black, fontSize = 16.sp, lineHeight = 18.sp)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 18.dp),
+                verticalArrangement = Arrangement.spacedBy(5.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    title,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 16.sp,
+                    lineHeight = 18.sp,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                )
                 Text(
                     subtitle,
                     color = ProMuted,
                     style = MaterialTheme.typography.bodySmall,
                     lineHeight = 16.sp,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                 )
             }
         }
