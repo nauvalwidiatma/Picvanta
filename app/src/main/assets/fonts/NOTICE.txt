@@ -1,0 +1,13 @@
+Picvanta font assets
+
+The fonts in this folder are sourced from Google Fonts:
+https://fonts.google.com/
+
+Google Fonts are open source and may be used commercially:
+https://developers.google.com/fonts/faq
+
+Most fonts here are distributed from google/fonts under the SIL Open Font
+License 1.1. Permanent Marker is distributed from google/fonts under the
+Apache License 2.0. See the upstream repository for each font's current
+license text and metadata:
+https://github.com/google/fonts

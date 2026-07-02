@@ -1,0 +1,71 @@
+{
+  "schema_version": "altanova.automation_state.v0.3",
+  "app": {
+    "package": "com.gassticker",
+    "screen": "screen.home"
+  },
+  "default_state": {
+    "active_screen": "screen.home",
+    "has_image": false,
+    "has_selection": false,
+    "active_tab": null,
+    "visible_ids": [
+      "screen.home",
+      "menu.remove_bg_sticker"
+    ],
+    "editor_initial_ids": [
+      "screen.editor",
+      "panel.source_picker",
+      "status.editor",
+      "command.open_image",
+      "dropzone.open_image",
+      "panel.editor_tools",
+      "tab.select",
+      "tab.add",
+      "tab.cut",
+      "tab.text",
+      "tab.style",
+      "tab.export"
+    ],
+    "disabled_until_image_loaded": [
+      "tab.add",
+      "tab.cut",
+      "tab.text",
+      "tab.style",
+      "tab.export"
+    ]
+  },
+  "runtime_state_api": {
+    "command": "get_state",
+    "broadcast_action": "com.gassticker.AUTOMATION",
+    "fields": [
+      "active_screen",
+      "has_image",
+      "has_selection",
+      "active_tab",
+      "status",
+      "label",
+      "font",
+      "text_style",
+      "font_color",
+      "text_style_color",
+      "border_color",
+      "border_width",
+      "brush_size",
+      "text_offset_x",
+      "text_offset_y",
+      "can_undo",
+      "can_redo",
+      "is_processing",
+      "last_saved_uri",
+      "last_error"
+    ]
+  },
+  "state_notes": [
+    "After an image is loaded, canvas.image_editor becomes the primary magic select target.",
+    "After a selection exists, Add/Cut brush controls and export preview become meaningful.",
+    "Fonts, text style chips, and border swatches update the generated sticker without an explicit update button.",
+    "Automation can use broadcast commands from automation-contract.json to navigate and set editor parameters without screenshot tapping.",
+    "For async commands such as magic_select, compose_sticker, load_image_path, and save_png, poll get_state until is_processing is false or the expected field changes."
+  ]
+}

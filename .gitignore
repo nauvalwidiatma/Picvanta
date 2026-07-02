@@ -1,0 +1,23 @@
+# Gradle / Android build output
+.gradle/
+.kotlin/
+build/
+app/build/
+
+# Local machine config
+local.properties
+
+# Runtime/export artifacts
+artifacts/
+*.apk
+*.aab
+
+# Device screenshots and UI dumps
+*.png
+*.xml
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+*.iml
+.idea/
