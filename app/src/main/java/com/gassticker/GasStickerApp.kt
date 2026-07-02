@@ -244,8 +244,7 @@ private data class StickerResult(
 
 private enum class EditorTab {
     Select,
-    Add,
-    Cut,
+    Refine,
     Text,
     Style,
     Export,
@@ -267,12 +266,11 @@ private enum class ColorPickerTarget {
     Outline,
 }
 
-private fun brushModeForTab(tab: EditorTab): BrushMode =
-    when (tab) {
-        EditorTab.Add -> BrushMode.Add
-        EditorTab.Cut -> BrushMode.Subtract
-        else -> BrushMode.None
-    }
+private fun BrushMode.toAutomationValue(): String =
+    if (this == BrushMode.Subtract) "cut" else "add"
+
+private fun BrushMode.toBrushStatus(): String =
+    if (this == BrushMode.Subtract) "Mengurangi seleksi..." else "Menambah seleksi..."
 
 @Composable
 fun GasStickerApp() {
@@ -384,6 +382,7 @@ private fun GasStickerScreen(
     var selectionBoundary by remember { mutableStateOf<IntArray?>(null) }
     var selectedPoint by remember { mutableStateOf<Offset?>(null) }
     var activeTab by remember { mutableStateOf(EditorTab.Select) }
+    var activeBrushMode by remember { mutableStateOf(BrushMode.Add) }
     var brushSize by remember { mutableStateOf(0.045f) }
     var lastBrushPoint by remember { mutableStateOf<Offset?>(null) }
     var undoStack by remember { mutableStateOf<List<SegmentMask>>(emptyList()) }
@@ -430,14 +429,23 @@ private fun GasStickerScreen(
         }
     }
 
-    fun tabFromName(value: String): EditorTab? =
-        EditorTab.entries.firstOrNull { it.name.equals(value, ignoreCase = true) }
+    fun tabFromName(value: String): EditorTab? {
+        val slug = stableSlug(value)
+        return when (slug) {
+            "add",
+            "cut",
+            "brush",
+            "rapikan" -> EditorTab.Refine
+            else -> EditorTab.entries.firstOrNull {
+                it.name.equals(value, ignoreCase = true) || stableSlug(it.name) == slug
+            }
+        }
+    }
 
     fun statusForTab(tab: EditorTab): String =
         when (tab) {
             EditorTab.Select -> if (isStickerEditor) "Tap objek untuk magic remove BG." else "Tap objek yang mau disimpan."
-            EditorTab.Add -> "Usap area yang mau ditambah."
-            EditorTab.Cut -> "Usap area yang mau dibuang."
+            EditorTab.Refine -> "Rapikan seleksi dengan tambah atau kurangi."
             EditorTab.Text -> "Atur teks sticker."
             EditorTab.Style -> "Atur font dan border sticker."
             EditorTab.Export -> "Preview dan simpan PNG."
@@ -449,6 +457,43 @@ private fun GasStickerScreen(
         } else {
             StickerComposer.createCutout(bitmap, mask)
         }
+
+    fun saveBitmapAsync(bitmap: Bitmap, successStatus: String) {
+        scope.launch {
+            runCatching {
+                withContext(Dispatchers.IO) {
+                    BitmapUtils.savePngToPictures(context, bitmap)
+                }
+            }.onSuccess {
+                lastSavedUri = it.toString()
+                lastAutomationError = null
+                status = successStatus
+                Toast.makeText(context, "Disimpan ke Pictures/Picvanta", Toast.LENGTH_SHORT).show()
+            }.onFailure {
+                lastAutomationError = it.message ?: "Gagal menyimpan PNG."
+                status = lastAutomationError ?: "Gagal menyimpan PNG."
+                Toast.makeText(context, it.message ?: "Gagal simpan", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    fun saveOriginalAsync(): Boolean {
+        val bitmap = sourceBitmap ?: return false
+        val mask = selectedMask ?: return false
+        scope.launch {
+            runCatching {
+                withContext(Dispatchers.Default) {
+                    StickerComposer.createCutout(bitmap, mask)
+                }
+            }.onSuccess {
+                saveBitmapAsync(it, "PNG ukuran asli disimpan.")
+            }.onFailure {
+                lastAutomationError = it.message ?: "Gagal membuat ukuran asli."
+                status = lastAutomationError ?: "Gagal membuat ukuran asli."
+            }
+        }
+        return true
+    }
 
     fun setTextOffset(next: Offset) {
         textOffset = Offset(
@@ -479,6 +524,7 @@ private fun GasStickerScreen(
         selectedPoint = null
         textOffset = Offset.Zero
         activeTab = EditorTab.Select
+        activeBrushMode = BrushMode.Add
         lastBrushPoint = null
         undoStack = emptyList()
         redoStack = emptyList()
@@ -602,10 +648,11 @@ private fun GasStickerScreen(
 
         selectedMask = edited
         selectionBoundary = SelectionBoundary.from(edited)
-        activeTab = if (mode == BrushMode.Add) EditorTab.Add else EditorTab.Cut
+        activeBrushMode = mode
+        activeTab = EditorTab.Refine
         updateStickerFromMask(bitmap, edited, "Seleksi brush diterapkan.")
         return automationOk("brush_stroke") {
-            put("mode", if (mode == BrushMode.Add) "add" else "cut")
+            put("mode", mode.toAutomationValue())
             put("points", points.size)
             put("brush_size", radius.toDouble())
         }
@@ -723,7 +770,14 @@ private fun GasStickerScreen(
                     automationOk(command.name) { put("accepted", true) }
                 }
                 "set_tab" -> {
-                    val tab = tabFromName(args.optString("tab", ""))
+                    val requestedTab = args.optString("tab", "")
+                    when (stableSlug(requestedTab)) {
+                        "add" -> activeBrushMode = BrushMode.Add
+                        "cut",
+                        "subtract",
+                        "sub" -> activeBrushMode = BrushMode.Subtract
+                    }
+                    val tab = tabFromName(requestedTab)
                         ?: return@editorHandler automationError(command.name, "unknown_tab")
                     activeTab = tab
                     lastBrushPoint = null
@@ -812,7 +866,7 @@ private fun GasStickerScreen(
                 }
                 "set_brush_size" -> {
                     brushSize = args.optDouble("size", brushSize.toDouble()).toFloat().coerceIn(0.015f, 0.12f)
-                    activeTab = if (activeTab == EditorTab.Cut) EditorTab.Cut else EditorTab.Add
+                    activeTab = EditorTab.Refine
                     automationOk(command.name) { put("brush_size", brushSize.toDouble()) }
                 }
                 "magic_select" -> {
@@ -860,7 +914,7 @@ private fun GasStickerScreen(
                     val mode = when (requestedMode) {
                         "add" -> BrushMode.Add
                         "cut", "subtract", "sub" -> BrushMode.Subtract
-                        else -> brushModeForTab(activeTab)
+                        else -> if (activeTab == EditorTab.Refine) activeBrushMode else BrushMode.None
                     }
                     val radius = args.optDouble("size", brushSize.toDouble()).toFloat().coerceIn(0.015f, 0.12f)
                     brushSize = radius
@@ -889,19 +943,20 @@ private fun GasStickerScreen(
                 "save_png",
                 "export_png" -> {
                     val sticker = stickerBitmap ?: return@editorHandler automationError(command.name, "sticker_required")
-                    scope.launch {
-                        runCatching {
-                            withContext(Dispatchers.IO) {
-                                BitmapUtils.savePngToPictures(context, sticker)
-                            }
-                        }.onSuccess {
-                            lastSavedUri = it.toString()
-                            lastAutomationError = null
-                            status = "PNG disimpan via automation."
-                        }.onFailure {
-                            lastAutomationError = it.message ?: "Gagal menyimpan PNG."
-                            status = lastAutomationError ?: "Gagal menyimpan PNG."
+                    if (isStickerEditor) {
+                        saveBitmapAsync(sticker, "PNG sticker disimpan via automation.")
+                    } else {
+                        if (!saveOriginalAsync()) {
+                            return@editorHandler automationError(command.name, "selection_required")
                         }
+                    }
+                    activeTab = EditorTab.Export
+                    automationOk(command.name) { put("accepted", true) }
+                }
+                "save_original_png",
+                "export_original_png" -> {
+                    if (!saveOriginalAsync()) {
+                        return@editorHandler automationError(command.name, "selection_required")
                     }
                     activeTab = EditorTab.Export
                     automationOk(command.name) { put("accepted", true) }
@@ -930,6 +985,7 @@ private fun GasStickerScreen(
                 .put("has_image", sourceBitmap != null)
                 .put("has_selection", selectedMask != null)
                 .put("active_tab", activeTab.name.lowercase())
+                .put("brush_mode", activeBrushMode.toAutomationValue())
                 .put("status", status)
                 .put("label", label)
                 .put("font", selectedFont.name)
@@ -993,10 +1049,10 @@ private fun GasStickerScreen(
                     lastBrushPoint = norm
                     undoStack = undoStack + SelectionEditor.copy(mask)
                     redoStack = emptyList()
-                    val edited = SelectionEditor.applyBrush(mask, norm.x, norm.y, brushModeForTab(activeTab), brushSize)
+                    val edited = SelectionEditor.applyBrush(mask, norm.x, norm.y, activeBrushMode, brushSize)
                     selectedMask = edited
                     selectionBoundary = SelectionBoundary.from(edited)
-                    status = if (activeTab == EditorTab.Add) "Menambah seleksi..." else "Mengurangi seleksi..."
+                    status = activeBrushMode.toBrushStatus()
                 },
                 onBrushMove = { norm ->
                     val mask = selectedMask ?: return@SourcePicker
@@ -1007,7 +1063,7 @@ private fun GasStickerScreen(
                         fromY = previous.y,
                         toX = norm.x,
                         toY = norm.y,
-                        mode = brushModeForTab(activeTab),
+                        mode = activeBrushMode,
                         radiusFraction = brushSize,
                     )
                     lastBrushPoint = norm
@@ -1043,6 +1099,7 @@ private fun GasStickerScreen(
                 textStyleColor = textStyleColor,
                 selectedFont = selectedFont,
                 selectedTextTreatment = selectedTextTreatment,
+                activeBrushMode = activeBrushMode,
                 brushSize = brushSize,
                 sticker = stickerBitmap,
                 hasImage = sourceBitmap != null,
@@ -1062,8 +1119,7 @@ private fun GasStickerScreen(
                     lastBrushPoint = null
                     status = when (it) {
                         EditorTab.Select -> statusForTab(EditorTab.Select)
-                        EditorTab.Add -> "Usap area yang mau ditambah."
-                        EditorTab.Cut -> "Usap area yang mau dibuang."
+                        EditorTab.Refine -> statusForTab(EditorTab.Refine)
                         EditorTab.Text -> "Atur teks sticker."
                         EditorTab.Style -> "Atur font dan border sticker."
                         EditorTab.Export -> "Preview dan simpan PNG."
@@ -1082,26 +1138,19 @@ private fun GasStickerScreen(
                 onTextStyleColorChange = { textStyleColor = it },
                 onOutlineColorChange = { outlineColor = it },
                 onOutlineWidthChange = { outlineWidth = it },
+                onBrushModeChange = { activeBrushMode = it },
                 onBrushSizeChange = { brushSize = it },
                 onUndo = { performUndo() },
                 onRedo = { performRedo() },
                 onSave = {
                     val sticker = stickerBitmap ?: return@BottomEditorPanel
-                    scope.launch {
-                        runCatching {
-                            withContext(Dispatchers.IO) {
-                                BitmapUtils.savePngToPictures(context, sticker)
-                            }
-                        }.onSuccess {
-                            lastSavedUri = it.toString()
-                            lastAutomationError = null
-                            Toast.makeText(context, "Disimpan ke Pictures/Picvanta", Toast.LENGTH_SHORT).show()
-                        }.onFailure {
-                            lastAutomationError = it.message ?: "Gagal simpan"
-                            Toast.makeText(context, it.message ?: "Gagal simpan", Toast.LENGTH_SHORT).show()
-                        }
+                    if (isStickerEditor) {
+                        saveBitmapAsync(sticker, "PNG sticker disimpan.")
+                    } else {
+                        saveOriginalAsync()
                     }
                 },
+                onSaveOriginal = { saveOriginalAsync() },
             )
 
             Text(
@@ -1317,6 +1366,7 @@ private fun BottomEditorPanel(
     textStyleColor: Int,
     selectedFont: FontChoice,
     selectedTextTreatment: StickerTextTreatment,
+    activeBrushMode: BrushMode,
     brushSize: Float,
     sticker: Bitmap?,
     hasImage: Boolean,
@@ -1332,10 +1382,12 @@ private fun BottomEditorPanel(
     onTextStyleColorChange: (Int) -> Unit,
     onOutlineColorChange: (Int) -> Unit,
     onOutlineWidthChange: (Float) -> Unit,
+    onBrushModeChange: (BrushMode) -> Unit,
     onBrushSizeChange: (Float) -> Unit,
     onUndo: () -> Unit,
     onRedo: () -> Unit,
     onSave: () -> Unit,
+    onSaveOriginal: () -> Unit,
 ) {
     var colorPickerTarget by remember { mutableStateOf<ColorPickerTarget?>(null) }
     var customFontColor by remember { mutableStateOf(Color.rgb(175, 82, 222)) }
@@ -1368,8 +1420,7 @@ private fun BottomEditorPanel(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 EditorTabButton(EditorTab.Select, activeTab, Icons.Filled.TouchApp, "Select", true, onTabChange)
-                EditorTabButton(EditorTab.Add, activeTab, Icons.Filled.AddCircle, "Add", hasImage, onTabChange)
-                EditorTabButton(EditorTab.Cut, activeTab, Icons.Filled.RemoveCircle, "Cut", hasImage, onTabChange)
+                EditorTabButton(EditorTab.Refine, activeTab, Icons.Filled.AutoFixHigh, "Rapikan", hasImage, onTabChange)
                 if (allowTextStyleControls) {
                     EditorTabButton(EditorTab.Text, activeTab, Icons.Filled.TextFields, "Text", hasImage, onTabChange)
                     EditorTabButton(EditorTab.Style, activeTab, Icons.Filled.Palette, "Style", hasImage, onTabChange)
@@ -1385,8 +1436,24 @@ private fun BottomEditorPanel(
                     onRedo = onRedo,
                 )
 
-                EditorTab.Add,
-                EditorTab.Cut -> {
+                EditorTab.Refine -> {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+                    ) {
+                        CompactChoiceChip(
+                            text = "Tambah",
+                            selected = activeBrushMode == BrushMode.Add,
+                            onClick = { onBrushModeChange(BrushMode.Add) },
+                            stableId = "brush_mode.add",
+                        )
+                        CompactChoiceChip(
+                            text = "Kurangi",
+                            selected = activeBrushMode == BrushMode.Subtract,
+                            onClick = { onBrushModeChange(BrushMode.Subtract) },
+                            stableId = "brush_mode.cut",
+                        )
+                    }
                     BrushSizeRow(
                         brushSize = brushSize,
                         onBrushSizeChange = onBrushSizeChange,
@@ -1529,7 +1596,9 @@ private fun BottomEditorPanel(
 
                 EditorTab.Export -> PreviewAndActions(
                     sticker = sticker,
+                    isStickerEditor = allowTextStyleControls,
                     onSave = onSave,
+                    onSaveOriginal = onSaveOriginal,
                 )
             }
         }
@@ -1593,7 +1662,7 @@ private fun CompactChoiceChip(
     ) {
         Box(
             modifier = Modifier
-                .fillMaxSize()
+                .height(34.dp)
                 .padding(horizontal = 11.dp),
             contentAlignment = Alignment.Center,
         ) {
@@ -2019,11 +2088,10 @@ private fun SourcePicker(
                                     } else if (!isProcessing && !didTransform) {
                                         val position = pressed.first().position
                                         when (activeTab) {
-                                            EditorTab.Add,
-                                            EditorTab.Cut -> {
+                                            EditorTab.Refine -> {
                                                 if (!didBrush) {
                                                     onBrushStart(normalized(position))
-                                                    didBrush = true
+                                                didBrush = true
                                                 } else if (position != lastSingle) {
                                                     onBrushMove(normalized(position))
                                                 }
@@ -2709,7 +2777,9 @@ private fun colorToHsv(color: Int): FloatArray =
 @Composable
 private fun PreviewAndActions(
     sticker: Bitmap?,
+    isStickerEditor: Boolean,
     onSave: () -> Unit,
+    onSaveOriginal: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text("Preview", fontWeight = FontWeight.SemiBold)
@@ -2734,15 +2804,37 @@ private fun PreviewAndActions(
             }
         }
 
-        Button(
-            onClick = onSave,
-            enabled = sticker != null,
-            modifier = Modifier
-                .fillMaxWidth()
-                .stableId("command.save", "button"),
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-        ) {
-            Text("Simpan")
+        if (isStickerEditor) {
+            Button(
+                onClick = onSave,
+                enabled = sticker != null,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .stableId("command.save", "button"),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+            ) {
+                Text("Simpan sticker")
+            }
+            OutlinedButton(
+                onClick = onSaveOriginal,
+                enabled = sticker != null,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .stableId("command.save_original", "button"),
+            ) {
+                Text("Simpan ukuran asli")
+            }
+        } else {
+            Button(
+                onClick = onSaveOriginal,
+                enabled = sticker != null,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .stableId("command.save_original", "button"),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+            ) {
+                Text("Simpan ukuran asli")
+            }
         }
         Spacer(modifier = Modifier.width(1.dp))
     }

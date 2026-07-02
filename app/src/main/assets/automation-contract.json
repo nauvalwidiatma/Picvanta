@@ -1,5 +1,5 @@
 {
-  "schema_version": "altanova.automation_contract.v0.4",
+  "schema_version": "altanova.automation_contract.v0.6",
   "app": {
     "name": "Picvanta",
     "package": "com.gassticker",
@@ -26,7 +26,7 @@
       { "command": "load_sample_image", "description": "Load an internal sample image for repeatable automation tests." },
       { "command": "load_image_path", "args": { "path": "Absolute image path readable by the app process" } },
       { "command": "load_image_uri", "args": { "uri": "Android content/file URI readable by the app" } },
-      { "command": "set_tab", "args": { "tab": "select|add|cut|text|style|export" } },
+      { "command": "set_tab", "args": { "tab": "select|refine|rapikan|add|cut|text|style|export" }, "description": "Use refine/rapikan for the merged brush tab; add and cut remain aliases that also set brush_mode." },
       { "command": "set_text", "args": { "text": "Sticker text, max 18 characters" } },
       { "command": "move_text", "args": { "direction": "up|down|left|right", "step": "optional float pixels" } },
       { "command": "move_text", "args": { "dx": "float pixels", "dy": "float pixels" } },
@@ -47,6 +47,7 @@
       { "command": "redo" },
       { "command": "compose_sticker", "async": true },
       { "command": "save_png", "aliases": ["export_png"], "async": true, "description": "Save current PNG to Pictures/Picvanta." },
+      { "command": "save_original_png", "aliases": ["export_original_png"], "async": true, "description": "Save original-size transparent cutout PNG to Pictures/Picvanta." },
       { "command": "reset_style" }
     ]
   },
@@ -77,15 +78,17 @@
     { "id": "preview.mini_sticker", "role": "image", "description": "Small sticker preview on the editor canvas." },
     { "id": "preview.export", "role": "image", "description": "Large export preview in the Export tab." },
     { "id": "tab.select", "role": "tab", "description": "Select/magic remove background mode." },
-    { "id": "tab.add", "role": "tab", "description": "Brush add-to-selection mode." },
-    { "id": "tab.cut", "role": "tab", "description": "Brush subtract-from-selection mode." },
+    { "id": "tab.refine", "role": "tab", "description": "Merged brush refine tab for add and cut selection edits." },
     { "id": "tab.text", "role": "tab", "description": "Sticker text input mode." },
     { "id": "tab.style", "role": "tab", "description": "Sticker font, text treatment, and outline style mode." },
     { "id": "tab.export", "role": "tab", "description": "Export preview and save mode." },
     { "id": "command.undo", "role": "button", "description": "Undo latest selection edit." },
     { "id": "command.redo", "role": "button", "description": "Redo latest undone selection edit." },
     { "id": "command.save", "role": "button", "description": "Save current sticker PNG." },
-    { "id": "control.brush_size", "role": "slider", "description": "Brush size control for Add and Cut modes." },
+    { "id": "command.save_original", "role": "button", "description": "Save original-size transparent cutout PNG." },
+    { "id": "brush_mode.add", "role": "chip", "description": "Set refine brush to add-to-selection mode." },
+    { "id": "brush_mode.cut", "role": "chip", "description": "Set refine brush to subtract-from-selection mode." },
+    { "id": "control.brush_size", "role": "slider", "description": "Brush size control for Rapikan refine mode." },
     { "id": "control.border_width", "role": "slider", "description": "Sticker object border width control." },
     { "id": "input.sticker_text", "role": "text_field", "description": "Sticker text input." },
     { "id": "control.text_position", "role": "joystick", "description": "Text position joystick in the Text tab." },
@@ -191,7 +194,7 @@
         "menu.remove_bg_editor",
         "command.open_image or dropzone.open_image",
         "canvas.image_editor",
-        "tab.add or tab.cut",
+        "tab.refine",
         "tab.export",
         "command.save"
       ]
@@ -199,7 +202,8 @@
     {
       "id": "flow.refine_selection",
       "steps": [
-        "tab.add or tab.cut",
+        "tab.refine",
+        "brush_mode.add or brush_mode.cut",
         "control.brush_size",
         "canvas.image_editor",
         "command.undo or command.redo"

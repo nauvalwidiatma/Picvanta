@@ -4,6 +4,10 @@ All notable user-facing changes to Picvanta are tracked here.
 
 ## Unreleased
 
+- Merged separate Add and Cut brush tabs into one `Rapikan` tab with add/cut mode chips.
+- Updated automation contract/state to v0.6 with `tab.refine`, `brush_mode.add`, `brush_mode.cut`, and live `brush_mode`.
+- Added original-size PNG export. Sticker Editor now has sticker export plus original-size export; Remove BG only exposes original-size export.
+- Updated automation contract/state to v0.5 with `save_original_png`.
 - Refined Home layout with centered brand area and larger centered tool icons/text.
 - Changed Home to a two-item square grid: Sticker Editor and Remove BG.
 - Added Remove BG editor mode without text/font/style controls.

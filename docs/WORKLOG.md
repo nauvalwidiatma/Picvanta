@@ -2,6 +2,37 @@
 
 Internal engineering notes for each Picvanta iteration. Keep this more practical than the changelog: what changed, what was tested, and what remains risky.
 
+## 2026-07-03 - Merged Brush Refine Tab
+
+Goal:
+- Merge Add and Cut into one clearer editing menu named Rapikan.
+
+Changed:
+- Replaced separate Add/Cut tabs with one `Rapikan` tab.
+- Added `Tambah` and `Kurangi` mode chips inside Rapikan.
+- Routed brush gestures through the active brush mode instead of the tab name.
+- Kept automation compatibility: `set_tab add` and `set_tab cut` still work as aliases.
+- Updated automation contract/state to v0.6 with `tab.refine`, `brush_mode.add`, `brush_mode.cut`, and runtime `brush_mode`.
+
+Notes:
+- No commit made for this iteration yet; commit only on explicit user request.
+
+## 2026-07-03 - Original Size Export
+
+Goal:
+- Let Sticker Editor export both a styled sticker PNG and an original-size cutout PNG, while Remove BG stays focused on original-size cutout only.
+
+Changed:
+- Added `Simpan ukuran asli` export action.
+- Sticker Editor export tab now shows `Simpan sticker` and `Simpan ukuran asli`.
+- Remove BG export tab only shows `Simpan ukuran asli`.
+- Added automation command `save_original_png` / `export_original_png`.
+- Updated automation contract/state to v0.5.
+
+Notes:
+- Original-size export uses the source image dimensions and current mask as a transparent cutout.
+- No commit made for this iteration yet; commit only on explicit user request.
+
 ## 2026-07-03 - Home Layout Polish
 
 Goal:

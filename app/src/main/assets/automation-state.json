@@ -1,5 +1,5 @@
 {
-  "schema_version": "altanova.automation_state.v0.4",
+  "schema_version": "altanova.automation_state.v0.6",
   "app": {
     "package": "com.gassticker",
     "screen": "screen.home"
@@ -23,15 +23,13 @@
       "dropzone.open_image",
       "panel.editor_tools",
       "tab.select",
-      "tab.add",
-      "tab.cut",
+      "tab.refine",
       "tab.text",
       "tab.style",
       "tab.export"
     ],
     "disabled_until_image_loaded": [
-      "tab.add",
-      "tab.cut",
+      "tab.refine",
       "tab.text",
       "tab.style",
       "tab.export"
@@ -46,6 +44,7 @@
       "has_image",
       "has_selection",
       "active_tab",
+      "brush_mode",
       "status",
       "label",
       "font",
@@ -66,8 +65,9 @@
   },
   "state_notes": [
     "After an image is loaded, canvas.image_editor becomes the primary magic select target.",
-    "After a selection exists, Add/Cut brush controls and export preview become meaningful.",
-    "Sticker Editor exposes Text and Style controls. Remove BG mode hides Text and Style and exports a transparent cutout.",
+    "After a selection exists, the Rapikan tab exposes add/cut brush mode chips, brush size, undo/redo, and export preview becomes meaningful.",
+    "Sticker Editor exposes Text and Style controls. Export tab offers sticker PNG and original-size cutout PNG.",
+    "Remove BG mode hides Text and Style and only exports original-size transparent cutout PNG.",
     "Fonts, text style chips, and border swatches update the generated sticker without an explicit update button.",
     "Automation can use broadcast commands from automation-contract.json to navigate and set editor parameters without screenshot tapping.",
     "For async commands such as magic_select, compose_sticker, load_image_path, and save_png, poll get_state until is_processing is false or the expected field changes."
