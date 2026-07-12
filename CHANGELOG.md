@@ -4,6 +4,9 @@ All notable user-facing changes to Picvanta are tracked here.
 
 ## Unreleased
 
+- Added production-release preparation: an offline release manifest, signing-key guard, bilingual Google Play listings, Data Safety record, third-party notices, and a GitHub Pages privacy policy.
+- Replaced the app launcher/splash logo with the new Picvanta P wordmark supplied by the user.
+- Added a branded launch background/splash to avoid the long blank white startup screen.
 - Merged separate Add and Cut brush tabs into one `Rapikan` tab with add/cut mode chips.
 - Updated automation contract/state to v0.6 with `tab.refine`, `brush_mode.add`, `brush_mode.cut`, and live `brush_mode`.
 - Added original-size PNG export. Sticker Editor now has sticker export plus original-size export; Remove BG only exposes original-size export.

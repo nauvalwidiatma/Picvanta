@@ -1,0 +1,12 @@
+<resources>
+    <style name="Theme.GasSticker" parent="android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowSplashScreenBackground">#F5F5F7</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/launcher_foreground</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">#EAF4FF</item>
+        <item name="android:windowBackground">@drawable/window_background_pro</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:navigationBarColor">#F5F5F7</item>
+        <item name="android:statusBarColor">#F5F5F7</item>
+    </style>
+</resources>

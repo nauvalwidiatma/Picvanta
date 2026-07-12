@@ -2,6 +2,56 @@
 
 Internal engineering notes for each Picvanta iteration. Keep this more practical than the changelog: what changed, what was tested, and what remains risky.
 
+## 2026-07-12 - Play Store Production Preparation
+
+Goal:
+- Prepare Picvanta 1.0.0 for a global Google Play submission without changing its local-only product behavior.
+
+Changed:
+- Moved the ALTANOVA automation broadcast receiver to the debug manifest only; it cannot ship in the release variant.
+- Removed transitive `INTERNET` and `ACCESS_NETWORK_STATE` declarations from the release manifest so the app remains on-device only.
+- Added a private upload-key configuration pattern, `verifyPlayRelease`, and release version `1.0.0`.
+- Added English and Indonesian store listing copy, a Data Safety declaration record, third-party notices, and a release checklist.
+- Added a bilingual static privacy policy and a GitHub Actions workflow that deploys `docs/` to GitHub Pages.
+- Localized key customer-facing editor copy from the Android system language: English by default and Indonesian for `id` locale devices.
+- Updated `.gitignore` so Android resource XML/PNG files are no longer accidentally excluded from source control.
+
+Tested:
+- `assembleDebug` succeeds.
+- Release manifest was generated and checked for the Picvanta automation receiver and network permissions.
+
+Remaining external setup:
+- Create a real support email, a private upload key, a GitHub repository, and enable GitHub Pages with GitHub Actions.
+- Do not upload until the signed `bundleRelease` AAB has passed device QA and the live privacy-policy URL has been entered in Play Console.
+
+## 2026-07-12 - Picvanta Logo Replacement
+
+Goal:
+- Use the supplied Picvanta P wordmark as the app logo.
+
+Changed:
+- Replaced the old vector `launcher_foreground` with a PNG resource generated from the supplied logo image.
+- Added a full logo PNG resource for reuse by splash/branding.
+
+Notes:
+- Resource PNG/XML files are ignored by the current `.gitignore`; use forced add for these files when committing.
+
+## 2026-07-12 - Branded Startup Background
+
+Goal:
+- Avoid the long blank white screen before Compose draws the first frame.
+
+Changed:
+- Replaced the plain launch window background with a soft Picvanta-style gradient and centered launcher mark.
+- Added Android 12+ splash attributes in `values-v31`.
+
+Tested:
+- Built `assembleDebug` successfully.
+- Installed and launched on tablet `FNRYD23104600269`.
+
+Notes:
+- This improves perceived startup while the app initializes; it does not change editor behavior.
+
 ## 2026-07-03 - Merged Brush Refine Tab
 
 Goal:

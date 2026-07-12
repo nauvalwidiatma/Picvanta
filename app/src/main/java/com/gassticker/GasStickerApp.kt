@@ -1,5 +1,6 @@
 package com.gassticker
 
+import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Color
@@ -224,6 +225,13 @@ private fun automationError(command: String, message: String): JSONObject =
 private fun Int.toHexColor(): String =
     String.format("#%06X", 0xFFFFFF and this)
 
+private fun localizedText(context: Context, indonesian: String, english: String): String =
+    if (context.resources.configuration.locales[0]?.language == "id") indonesian else english
+
+@Composable
+private fun uiText(indonesian: String, english: String): String =
+    localizedText(LocalContext.current, indonesian, english)
+
 private fun JSONObject.optColor(name: String, fallback: Int): Int =
     if (!has(name)) fallback else runCatching {
         val raw = get(name)
@@ -415,7 +423,7 @@ private fun GasStickerScreen(
         )
     }
     var isProcessing by remember { mutableStateOf(false) }
-    var status by remember { mutableStateOf("Pilih foto, lalu tap objek yang mau jadi sticker.") }
+    var status by remember { mutableStateOf(localizedText(context, "Pilih foto, lalu tap objek yang mau jadi sticker.", "Choose a photo, then tap the object to turn into a sticker.")) }
     var lastSavedUri by remember { mutableStateOf<String?>(null) }
     var lastAutomationError by remember { mutableStateOf<String?>(null) }
     val isStickerEditor = editorMode == EditorMode.Sticker
@@ -425,7 +433,7 @@ private fun GasStickerScreen(
             activeTab = EditorTab.Select
         }
         if (!isStickerEditor && status.contains("sticker", ignoreCase = true)) {
-            status = "Pilih foto, lalu tap objek yang mau disimpan."
+            status = localizedText(context, "Pilih foto, lalu tap objek yang mau disimpan.", "Choose a photo, then tap the object to save.")
         }
     }
 
@@ -444,11 +452,11 @@ private fun GasStickerScreen(
 
     fun statusForTab(tab: EditorTab): String =
         when (tab) {
-            EditorTab.Select -> if (isStickerEditor) "Tap objek untuk magic remove BG." else "Tap objek yang mau disimpan."
-            EditorTab.Refine -> "Rapikan seleksi dengan tambah atau kurangi."
-            EditorTab.Text -> "Atur teks sticker."
-            EditorTab.Style -> "Atur font dan border sticker."
-            EditorTab.Export -> "Preview dan simpan PNG."
+            EditorTab.Select -> if (isStickerEditor) localizedText(context, "Tap objek untuk magic remove BG.", "Tap an object for Magic Remove BG.") else localizedText(context, "Tap objek yang mau disimpan.", "Tap the object you want to save.")
+            EditorTab.Refine -> localizedText(context, "Rapikan seleksi dengan tambah atau kurangi.", "Refine the selection with add or subtract.")
+            EditorTab.Text -> localizedText(context, "Atur teks sticker.", "Set the sticker text.")
+            EditorTab.Style -> localizedText(context, "Atur font dan border sticker.", "Set the font and sticker border.")
+            EditorTab.Export -> localizedText(context, "Preview dan simpan PNG.", "Preview and save a PNG.")
         }
 
     fun composeOutput(bitmap: Bitmap, mask: SegmentMask): Bitmap =
@@ -468,7 +476,7 @@ private fun GasStickerScreen(
                 lastSavedUri = it.toString()
                 lastAutomationError = null
                 status = successStatus
-                Toast.makeText(context, "Disimpan ke Pictures/Picvanta", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, localizedText(context, "Disimpan ke Pictures/Picvanta", "Saved to Pictures/Picvanta"), Toast.LENGTH_SHORT).show()
             }.onFailure {
                 lastAutomationError = it.message ?: "Gagal menyimpan PNG."
                 status = lastAutomationError ?: "Gagal menyimpan PNG."
@@ -486,7 +494,7 @@ private fun GasStickerScreen(
                     StickerComposer.createCutout(bitmap, mask)
                 }
             }.onSuccess {
-                saveBitmapAsync(it, "PNG ukuran asli disimpan.")
+                saveBitmapAsync(it, localizedText(context, "PNG ukuran asli disimpan.", "Original-size PNG saved."))
             }.onFailure {
                 lastAutomationError = it.message ?: "Gagal membuat ukuran asli."
                 status = lastAutomationError ?: "Gagal membuat ukuran asli."
@@ -530,9 +538,9 @@ private fun GasStickerScreen(
         redoStack = emptyList()
         lastAutomationError = null
         status = if (isStickerEditor) {
-            "Gambar $sourceName siap. Tap objek untuk magic remove BG."
+            localizedText(context, "Gambar $sourceName siap. Tap objek untuk magic remove BG.", "Your $sourceName image is ready. Tap an object for Magic Remove BG.")
         } else {
-            "Gambar $sourceName siap. Tap objek yang mau disimpan."
+            localizedText(context, "Gambar $sourceName siap. Tap objek yang mau disimpan.", "Your $sourceName image is ready. Tap the object you want to save.")
         }
     }
 
@@ -1120,9 +1128,9 @@ private fun GasStickerScreen(
                     status = when (it) {
                         EditorTab.Select -> statusForTab(EditorTab.Select)
                         EditorTab.Refine -> statusForTab(EditorTab.Refine)
-                        EditorTab.Text -> "Atur teks sticker."
-                        EditorTab.Style -> "Atur font dan border sticker."
-                        EditorTab.Export -> "Preview dan simpan PNG."
+                        EditorTab.Text -> statusForTab(EditorTab.Text)
+                        EditorTab.Style -> statusForTab(EditorTab.Style)
+                        EditorTab.Export -> statusForTab(EditorTab.Export)
                     }
                 },
                 onLabelChange = { label = it.take(18) },
@@ -1145,7 +1153,7 @@ private fun GasStickerScreen(
                 onSave = {
                     val sticker = stickerBitmap ?: return@BottomEditorPanel
                     if (isStickerEditor) {
-                        saveBitmapAsync(sticker, "PNG sticker disimpan.")
+                        saveBitmapAsync(sticker, localizedText(context, "PNG sticker disimpan.", "Sticker PNG saved."))
                     } else {
                         saveOriginalAsync()
                     }
@@ -1154,7 +1162,7 @@ private fun GasStickerScreen(
             )
 
             Text(
-                text = "Gunakan foto milik sendiri atau yang sudah punya izin. Untuk wajah orang, minta izin dulu sebelum diedit atau dibagikan.",
+                text = uiText("Gunakan foto milik sendiri atau yang sudah punya izin. Untuk wajah orang, minta izin dulu sebelum diedit atau dibagikan.", "Use photos you own or are allowed to use. For someone else's face, ask before editing or sharing."),
                 color = ProDanger,
                 style = MaterialTheme.typography.bodySmall,
             )
@@ -1190,7 +1198,7 @@ private fun HomeScreen(
                     letterSpacing = 0.sp,
                 )
                 Text(
-                    text = "Edit foto cepat, privat, langsung di HP.",
+                    text = uiText("Edit foto cepat, privat, langsung di HP.", "Fast, private photo editing, right on your phone."),
                     modifier = Modifier.padding(top = 6.dp),
                     color = ProMuted,
                     style = MaterialTheme.typography.bodyMedium,
@@ -1210,7 +1218,7 @@ private fun HomeScreen(
                 ) {
                     HomeMenuCard(
                         title = "Sticker Editor",
-                        subtitle = "Cutout, teks, style.",
+                        subtitle = uiText("Cutout, teks, style.", "Cutout, text, style."),
                         stableId = "menu.sticker_editor",
                         icon = Icons.Filled.StickyNote2,
                         onClick = onOpenSticker,
@@ -1218,7 +1226,7 @@ private fun HomeScreen(
                     )
                     HomeMenuCard(
                         title = "Remove BG",
-                        subtitle = "PNG transparan.",
+                        subtitle = uiText("PNG transparan.", "Transparent PNG."),
                         stableId = "menu.remove_bg_editor",
                         icon = Icons.Filled.AutoFixHigh,
                         onClick = onOpenRemoveBg,
@@ -1322,6 +1330,7 @@ private fun Header(
     editorMode: EditorMode,
     onBackHome: () -> Unit,
 ) {
+    val context = LocalContext.current
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -1336,9 +1345,9 @@ private fun Header(
             )
             Text(
                 text = if (editorMode == EditorMode.Sticker) {
-                    "Cutout, teks, style, export PNG."
+                    localizedText(context, "Cutout, teks, style, export PNG.", "Cutout, text, style, PNG export.")
                 } else {
-                    "Potong background dan simpan PNG transparan."
+                    localizedText(context, "Potong background dan simpan PNG transparan.", "Remove the background and save a transparent PNG.")
                 },
                 color = ProMuted,
                 style = MaterialTheme.typography.bodyMedium,
@@ -1348,7 +1357,7 @@ private fun Header(
             onClick = onBackHome,
             modifier = Modifier.stableId("command.home", "button"),
         ) {
-            Text("Home")
+            Text(uiText("Beranda", "Home"))
         }
     }
 }
@@ -1420,7 +1429,7 @@ private fun BottomEditorPanel(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 EditorTabButton(EditorTab.Select, activeTab, Icons.Filled.TouchApp, "Select", true, onTabChange)
-                EditorTabButton(EditorTab.Refine, activeTab, Icons.Filled.AutoFixHigh, "Rapikan", hasImage, onTabChange)
+                EditorTabButton(EditorTab.Refine, activeTab, Icons.Filled.AutoFixHigh, uiText("Rapikan", "Refine"), hasImage, onTabChange)
                 if (allowTextStyleControls) {
                     EditorTabButton(EditorTab.Text, activeTab, Icons.Filled.TextFields, "Text", hasImage, onTabChange)
                     EditorTabButton(EditorTab.Style, activeTab, Icons.Filled.Palette, "Style", hasImage, onTabChange)
@@ -1442,13 +1451,13 @@ private fun BottomEditorPanel(
                         horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
                     ) {
                         CompactChoiceChip(
-                            text = "Tambah",
+                            text = uiText("Tambah", "Add"),
                             selected = activeBrushMode == BrushMode.Add,
                             onClick = { onBrushModeChange(BrushMode.Add) },
                             stableId = "brush_mode.add",
                         )
                         CompactChoiceChip(
-                            text = "Kurangi",
+                            text = uiText("Kurangi", "Subtract"),
                             selected = activeBrushMode == BrushMode.Subtract,
                             onClick = { onBrushModeChange(BrushMode.Subtract) },
                             stableId = "brush_mode.cut",
@@ -1478,8 +1487,8 @@ private fun BottomEditorPanel(
                         modifier = Modifier
                             .weight(1f)
                             .stableId("input.sticker_text", "text_field"),
-                        label = { Text("Tuliskan teks") },
-                        placeholder = { Text("Tuliskan teks") },
+                        label = { Text(uiText("Tuliskan teks", "Write text")) },
+                        placeholder = { Text(uiText("Tuliskan teks", "Write text")) },
                         singleLine = true,
                     )
                     TextPositionJoystick(
@@ -1496,7 +1505,7 @@ private fun BottomEditorPanel(
                             .verticalScroll(rememberScrollState()),
                         verticalArrangement = Arrangement.spacedBy(7.dp),
                     ) {
-                        Text("Style Text", fontWeight = FontWeight.Black)
+                        Text(uiText("Gaya Teks", "Text Style"), fontWeight = FontWeight.Black)
                         InlineStyleControl(label = "Font") {
                             Row(
                                 modifier = Modifier
@@ -1549,7 +1558,7 @@ private fun BottomEditorPanel(
                                 onColorChange = onTextStyleColorChange,
                             )
                         }
-                        Text("Border Sticker", fontWeight = FontWeight.Black)
+                        Text(uiText("Border Sticker", "Sticker Border"), fontWeight = FontWeight.Black)
                         InlineStyleControl(label = "Width") {
                             OutlineWidthRow(
                                 outlineWidth = outlineWidth,
@@ -1860,7 +1869,7 @@ private fun BrushSizeRow(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text("Size", style = MaterialTheme.typography.bodySmall, color = ProMuted)
+        Text(uiText("Ukuran", "Size"), style = MaterialTheme.typography.bodySmall, color = ProMuted)
         Slider(
             value = brushSize,
             onValueChange = onBrushSizeChange,
@@ -2018,7 +2027,7 @@ private fun SourcePicker(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column {
-                    Text("Editor", fontWeight = FontWeight.Bold)
+                    Text(uiText("Editor", "Editor"), fontWeight = FontWeight.Bold)
                     Text(
                         status,
                         modifier = Modifier.stableId("status.editor", "status"),
@@ -2031,7 +2040,7 @@ private fun SourcePicker(
                     enabled = !isProcessing,
                     modifier = Modifier.stableId("command.open_image", "button"),
                 ) {
-                    Text(if (bitmap == null) "Pilih" else "Ganti")
+                    Text(if (bitmap == null) uiText("Pilih", "Choose") else uiText("Ganti", "Replace"))
                 }
             }
 
@@ -2124,7 +2133,7 @@ private fun SourcePicker(
                     ) {
                         Image(
                             bitmap = bitmap.asImageBitmap(),
-                            contentDescription = "Foto sumber",
+                            contentDescription = uiText("Foto sumber", "Source photo"),
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Fit,
                         )
@@ -2145,7 +2154,7 @@ private fun SourcePicker(
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(
-                                "Memproses...",
+                                uiText("Memproses...", "Processing..."),
                                 color = androidx.compose.ui.graphics.Color.White,
                                 fontWeight = FontWeight.Bold,
                             )
@@ -2205,12 +2214,12 @@ private fun MagicSelectHint(modifier: Modifier = Modifier) {
         ) {
             Icon(
                 imageVector = Icons.Filled.TouchApp,
-                contentDescription = "Magic select",
+                contentDescription = uiText("Magic select", "Magic select"),
                 tint = ProBlue,
                 modifier = Modifier.size(18.dp),
             )
             Text(
-                text = "Tap objek untuk magic remove BG",
+                text = uiText("Tap objek untuk magic remove BG", "Tap an object for Magic Remove BG"),
                 color = androidx.compose.ui.graphics.Color.White,
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold,
@@ -2345,7 +2354,7 @@ private fun MiniStickerPreview(
         ) {
             Image(
                 bitmap = sticker.asImageBitmap(),
-                contentDescription = "Preview sticker kecil",
+                contentDescription = uiText("Preview sticker kecil", "Small sticker preview"),
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Fit,
             )
@@ -2414,16 +2423,16 @@ private fun EmptyImageSlot(
                 ) {
                     Icon(
                         imageVector = Icons.Filled.AddCircle,
-                        contentDescription = "Open image",
+                        contentDescription = uiText("Buka gambar", "Open image"),
                         tint = androidx.compose.ui.graphics.Color(0xFF0A84FF),
                         modifier = Modifier
                             .padding(12.dp)
                             .size(34.dp),
                     )
                 }
-                Text("Tap to open image", fontWeight = FontWeight.SemiBold, color = androidx.compose.ui.graphics.Color(0xFF172033))
+                Text(uiText("Tap untuk membuka gambar", "Tap to open image"), fontWeight = FontWeight.SemiBold, color = androidx.compose.ui.graphics.Color(0xFF172033))
                 Text(
-                    "Gallery image, PNG or JPG",
+                    uiText("Gambar galeri, PNG atau JPG", "Gallery image, PNG or JPG"),
                     color = androidx.compose.ui.graphics.Color(0xFF40506A),
                     style = MaterialTheme.typography.bodySmall,
                 )
@@ -2557,7 +2566,7 @@ private fun ColorPickerOverlay(
                         .background(androidx.compose.ui.graphics.Color(previewColor), CircleShape)
                         .border(1.dp, ProBorder, CircleShape),
                 )
-                Text("Custom color", fontWeight = FontWeight.Bold)
+                Text(uiText("Warna kustom", "Custom color"), fontWeight = FontWeight.Bold)
             }
             Row(
                 modifier = Modifier
@@ -2603,7 +2612,7 @@ private fun ColorPickerOverlay(
                         .weight(1f)
                         .stableId("command.color_picker_cancel", "button"),
                 ) {
-                    Text("Cancel")
+                    Text(uiText("Batal", "Cancel"))
                 }
                 Button(
                     onClick = onApply,
@@ -2611,7 +2620,7 @@ private fun ColorPickerOverlay(
                         .weight(1f)
                         .stableId("command.color_picker_apply", "button"),
                 ) {
-                    Text("Apply")
+                    Text(uiText("Terapkan", "Apply"))
                 }
             }
         }
@@ -2782,7 +2791,7 @@ private fun PreviewAndActions(
     onSaveOriginal: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text("Preview", fontWeight = FontWeight.SemiBold)
+        Text(uiText("Pratinjau", "Preview"), fontWeight = FontWeight.SemiBold)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -2793,11 +2802,11 @@ private fun PreviewAndActions(
             contentAlignment = Alignment.Center,
         ) {
             if (sticker == null) {
-                Text("Preview akan muncul setelah kamu tap objek.")
+                Text(uiText("Pratinjau muncul setelah kamu tap objek.", "A preview will appear after you tap an object."))
             } else {
                 Image(
                     bitmap = sticker.asImageBitmap(),
-                    contentDescription = "Preview sticker",
+                    contentDescription = uiText("Pratinjau sticker", "Sticker preview"),
                     modifier = Modifier.size(230.dp),
                     contentScale = ContentScale.Fit,
                 )
@@ -2813,7 +2822,7 @@ private fun PreviewAndActions(
                     .stableId("command.save", "button"),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
             ) {
-                Text("Simpan sticker")
+                Text(uiText("Simpan sticker", "Save sticker"))
             }
             OutlinedButton(
                 onClick = onSaveOriginal,
@@ -2822,7 +2831,7 @@ private fun PreviewAndActions(
                     .fillMaxWidth()
                     .stableId("command.save_original", "button"),
             ) {
-                Text("Simpan ukuran asli")
+                Text(uiText("Simpan ukuran asli", "Save original size"))
             }
         } else {
             Button(
@@ -2833,7 +2842,7 @@ private fun PreviewAndActions(
                     .stableId("command.save_original", "button"),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
             ) {
-                Text("Simpan ukuran asli")
+                Text(uiText("Simpan ukuran asli", "Save original size"))
             }
         }
         Spacer(modifier = Modifier.width(1.dp))

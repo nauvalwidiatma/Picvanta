@@ -6,6 +6,9 @@ app/build/
 
 # Local machine config
 local.properties
+keystore.properties
+*.jks
+*.keystore
 
 # Runtime/export artifacts
 artifacts/
@@ -15,6 +18,10 @@ artifacts/
 # Device screenshots and UI dumps
 *.png
 *.xml
+!app/src/main/AndroidManifest.xml
+!app/src/debug/AndroidManifest.xml
+!app/src/main/res/**/*.png
+!app/src/main/res/**/*.xml
 
 # OS/editor noise
 .DS_Store
