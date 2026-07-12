@@ -10,6 +10,7 @@ Picvanta is an on-device Android sticker and background-removal editor. It uses 
 - [Release checklist](play-store/RELEASE_CHECKLIST.md)
 - [Public privacy policy source](docs/privacy-policy/index.html)
 - [Third-party notices](THIRD_PARTY_NOTICES.md)
+- [Full license texts and dependency inventory](LICENSES/THIRD_PARTY_NOTICES.md)
 
 ## Build
 

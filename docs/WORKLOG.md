@@ -24,6 +24,21 @@ Remaining external setup:
 - Create a real support email, a private upload key, a GitHub repository, and enable GitHub Pages with GitHub Actions.
 - Do not upload until the signed `bundleRelease` AAB has passed device QA and the live privacy-policy URL has been entered in Play Console.
 
+## 2026-07-12 - Complete Open-Source License Materials
+
+Goal:
+- Make the third-party attribution suitable for a production release, not merely a high-level notice.
+
+Changed:
+- Added the full Apache-2.0, BSD-3-Clause, and SIL Open Font License 1.1 texts under `LICENSES/`.
+- Added a per-font license inventory and a runtime dependency inventory.
+- Verified the bundled model against the official MagicTouch v1 binary by file size and SHA-256, then recorded its source URL, model card, license, and hash.
+- Added the `LICENSES/` directory as an Android asset source so the notices and license texts ship in every APK/AAB.
+
+Verification:
+- Bundled MagicTouch asset SHA-256: `E24338A717C1B7AD8D159666677EF400BABB7F33B8AD60C4D96DB4ECF694CD25`.
+- It matches the official MagicTouch v1 asset at the recorded upstream URL.
+
 ## 2026-07-12 - Picvanta Logo Replacement
 
 Goal:

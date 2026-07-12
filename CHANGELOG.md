@@ -4,6 +4,7 @@ All notable user-facing changes to Picvanta are tracked here.
 
 ## Unreleased
 
+- Completed release license materials: full Apache-2.0, BSD-3-Clause, and OFL-1.1 texts; a per-font inventory; and a SHA-256-verified MagicTouch model provenance record packaged with the app.
 - Added production-release preparation: an offline release manifest, signing-key guard, bilingual Google Play listings, Data Safety record, third-party notices, and a GitHub Pages privacy policy.
 - Replaced the app launcher/splash logo with the new Picvanta P wordmark supplied by the user.
 - Added a branded launch background/splash to avoid the long blank white startup screen.

@@ -1,13 +1,17 @@
-Picvanta font assets
+Picvanta bundled font notice
 
-The fonts in this folder are sourced from Google Fonts:
-https://fonts.google.com/
+The full per-font inventory and license texts are packaged with this app at:
+  assets/THIRD_PARTY_NOTICES.md
+  assets/OFL-1.1.txt
+  assets/Apache-2.0.txt
 
-Google Fonts are open source and may be used commercially:
-https://developers.google.com/fonts/faq
+Font source: https://github.com/google/fonts
 
-Most fonts here are distributed from google/fonts under the SIL Open Font
-License 1.1. Permanent Marker is distributed from google/fonts under the
-Apache License 2.0. See the upstream repository for each font's current
-license text and metadata:
-https://github.com/google/fonts
+SIL Open Font License 1.1:
+Anton, Bangers, Bebas Neue, Black Ops One, Codystar, Creepster, Ewert,
+Fascinate Inline, Fredericka the Great, Frijole, Grenze Gotisch, Metal Mania,
+Modak, Monoton, Pirata One, Press Start 2P, Racing Sans One, Rampart One, and
+Rubik Glitch.
+
+Apache License 2.0:
+Permanent Marker.

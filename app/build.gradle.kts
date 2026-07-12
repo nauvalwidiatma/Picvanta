@@ -32,6 +32,12 @@ android {
         compose = true
     }
 
+    sourceSets {
+        getByName("main") {
+            assets.srcDir(rootProject.file("LICENSES"))
+        }
+    }
+
     signingConfigs {
         if (hasReleaseSigning) {
             create("release") {
